@@ -3,129 +3,157 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Shipping Time | J&T</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=20261026-2" />
+  <meta name="theme-color" content="#d71920" />
+  <title>J&T Express | Shipping Time</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <link rel="stylesheet" href="/static/style.css?v=20261026-sla-standard" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <div class="app-shell">
-    <header class="hero">
-      <div class="jt-accent"></div>
-      <div class="hero-copy">
-        <div class="brand-row">
-          <span class="brand-pill"><span class="jt-mark">J&T</span> EXPRESS</span>
+  <header class="topbar shipping-style-header">
+    <div class="topbar-inner shipping-header-inner">
+      <div class="shipping-brand-block">
+        <div class="shipping-badges">
+          <span class="shipping-badge shipping-badge-red">J&amp;T EXPRESS</span>
+          <span class="shipping-badge shipping-badge-gray">PERFORMANCE LAST MILE</span>
         </div>
-        <h1>Shipping Time</h1>
-        <p>Performance Last Mile</p>
+        <h1>Shipping Time <span class="title-accent"></span></h1>
+        <p>Tempo operacional entre SC destino, processamento da base e entrega final</p>
       </div>
-      <div class="hero-date">
-        <span>Última visão</span>
+      <div class="header-date-box">
+        <span>ÚLTIMA VISÃO</span>
         <strong id="dataTitulo">--</strong>
       </div>
-    </header>
+    </div>
+  </header>
 
+  <main class="container">
     <section class="filters-panel">
-      <div class="filter-group">
-        <label for="dataInicial">Data inicial</label>
-        <input id="dataInicial" type="date" />
+      <div class="filters-head">
+        <div>
+          <span class="section-kicker">CONTROLE DE VISÃO</span>
+          <h2>Filtros operacionais</h2>
+          <p>Refine o período, a gestão, a cidade e a base analisada.</p>
+        </div>
+        <button id="resetFilters" class="btn btn-light" type="button">Limpar filtros</button>
       </div>
-      <div class="filter-group">
-        <label for="dataFinal">Data final</label>
-        <input id="dataFinal" type="date" />
+
+      <div class="filters-grid shipping-filters-grid">
+        <label class="filter-card">
+          <span>Data inicial</span>
+          <input id="dataInicial" type="date" />
+        </label>
+        <label class="filter-card">
+          <span>Data final</span>
+          <input id="dataFinal" type="date" />
+        </label>
+        <label class="filter-card">
+          <span>S/C</span>
+          <select id="scSelect"><option value="">Todos os S/C</option></select>
+        </label>
+        <label class="filter-card">
+          <span>Cidade</span>
+          <select id="cidadeSelect"><option value="">Todas as cidades</option></select>
+        </label>
+        <label class="filter-card">
+          <span>Base</span>
+          <select id="baseSelect"><option value="">Todas as bases</option></select>
+        </label>
+        <label class="filter-card">
+          <span>Ranking</span>
+          <select id="topSelect">
+            <option value="0" selected>Todas as bases</option>
+            <option value="20">Top 20</option>
+            <option value="50">Top 50</option>
+          </select>
+        </label>
       </div>
-      <div class="filter-group">
-        <label for="scSelect">S/C</label>
-        <select id="scSelect"><option value="">Todos</option></select>
-      </div>
-      <div class="filter-group">
-        <label for="cidadeSelect">Cidade</label>
-        <select id="cidadeSelect"><option value="">Todas as cidades</option></select>
-      </div>
-      <div class="filter-group filter-wide">
-        <label for="baseSelect">Base</label>
-        <select id="baseSelect"><option value="">Todas as bases</option></select>
-      </div>
-      <div class="filter-group">
-        <label for="topSelect">Ranking</label>
-        <select id="topSelect">
-          <option value="0" selected>Todas as bases</option>
-          <option value="20">Top 20</option>
-          <option value="50">Top 50</option>
-        </select>
-      </div>
-      <button id="resetFilters" class="reset-btn" type="button">Limpar filtros</button>
     </section>
 
     <section class="cards">
-      <article class="metric-card" data-stage="6">
-        <div class="metric-top"><span>Etapa 6</span><span class="status-dot" id="dot6"></span></div>
+      <article class="card kpi-card kpi-primary">
+        <div class="kpi-head"><span>Etapa 6</span><span class="kpi-tag">META 25,6H</span></div>
         <strong id="k6">--</strong>
-        <div class="metric-meta"><span>SC Destino → Base</span><b>Meta ≤ 25,6 h</b></div>
-        <div class="progress"><i id="bar6"></i></div>
+        <small>SC Destino → Base</small>
       </article>
-      <article class="metric-card" data-stage="7">
-        <div class="metric-top"><span>Etapa 7</span><span class="status-dot" id="dot7"></span></div>
+      <article class="card kpi-card kpi-neutral">
+        <div class="kpi-head"><span>Etapa 7</span><span class="kpi-tag neutral-tag">META 6,0H</span></div>
         <strong id="k7">--</strong>
-        <div class="metric-meta"><span>Processamento Base</span><b>Meta ≤ 6,0 h</b></div>
-        <div class="progress"><i id="bar7"></i></div>
+        <small>Processamento da base</small>
       </article>
-      <article class="metric-card" data-stage="8">
-        <div class="metric-top"><span>Etapa 8</span><span class="status-dot" id="dot8"></span></div>
+      <article class="card kpi-card kpi-success">
+        <div class="kpi-head"><span>Etapa 8</span><span class="kpi-tag success-tag">META 23,4H</span></div>
         <strong id="k8">--</strong>
-        <div class="metric-meta"><span>Saída → Entrega</span><b>Meta ≤ 23,4 h</b></div>
-        <div class="progress"><i id="bar8"></i></div>
+        <small>Saída para entrega → Entrega</small>
       </article>
-      <article class="metric-card total-card">
-        <div class="metric-top"><span>Total de pacotes</span><span class="package-icon">▣</span></div>
+      <article class="card kpi-card kpi-danger">
+        <div class="kpi-head"><span>Total de pacotes</span><span class="kpi-icon">∑</span></div>
         <strong id="kp">--</strong>
-        <div class="total-lines">
-          <div><span>Shipping médio 6+7+8</span><b id="kt">--</b></div>
-        </div>
+        <small>Shipping médio 6+7+8: <b id="kt">--</b></small>
       </article>
     </section>
 
-    <section class="insight-strip">
+    <section class="summary-strip">
       <div><span>Bases analisadas</span><strong id="kBases">--</strong></div>
       <div><span>Maior gargalo</span><strong id="kGargalo">--</strong></div>
       <div><span>Recorte atual</span><strong id="kRecorte">Todas as bases</strong></div>
     </section>
 
-    <section class="section-heading">
-      <div><span>RANKING OPERACIONAL</span><h2>Piores bases por etapa</h2></div>
-      <p>Quanto maior o tempo, pior a performance.</p>
+    <section class="panel ranking-section">
+      <div class="panel-title">
+        <div>
+          <span class="section-kicker">RANKING OPERACIONAL</span>
+          <h2>Piores bases por etapa</h2>
+          <span>Quanto maior o tempo, pior a performance operacional.</span>
+        </div>
+      </div>
+
+      <div class="stage-stack">
+        <article class="stage-panel">
+          <div class="stage-head"><div><span class="stage-chip">E6</span><h3>SC Destino → Base</h3></div><small>Meta 25,6 h</small></div>
+          <div id="b6" class="table-wrap ranking-table-wrap"></div>
+        </article>
+        <article class="stage-panel">
+          <div class="stage-head"><div><span class="stage-chip">E7</span><h3>Processamento Base</h3></div><small>Meta 6,0 h</small></div>
+          <div id="b7" class="table-wrap ranking-table-wrap"></div>
+        </article>
+        <article class="stage-panel">
+          <div class="stage-head"><div><span class="stage-chip">E8</span><h3>Saída → Entrega</h3></div><small>Meta 23,4 h</small></div>
+          <div id="b8" class="table-wrap ranking-table-wrap"></div>
+        </article>
+      </div>
     </section>
 
-    <section class="grid3 stacked-rankings">
-      <article class="panel ranking-panel">
-        <div class="panel-head"><div><span class="stage-chip">E6</span><h3>SC Destino → Base</h3></div><small>Meta 25,6 h</small></div>
-        <div id="b6" class="table-wrap"></div>
+    <section class="dashboard-grid">
+      <article class="panel dashboard-square">
+        <div class="panel-title">
+          <div>
+            <span class="section-kicker">GESTÃO</span>
+            <h2>S/C Piores</h2>
+            <span>Shipping médio consolidado das etapas 6, 7 e 8</span>
+          </div>
+        </div>
+        <div id="sc" class="table-wrap square-table"></div>
       </article>
-      <article class="panel ranking-panel">
-        <div class="panel-head"><div><span class="stage-chip">E7</span><h3>Processamento Base</h3></div><small>Meta 6,0 h</small></div>
-        <div id="b7" class="table-wrap"></div>
-      </article>
-      <article class="panel ranking-panel">
-        <div class="panel-head"><div><span class="stage-chip">E8</span><h3>Saída → Entrega</h3></div><small>Meta 23,4 h</small></div>
-        <div id="b8" class="table-wrap"></div>
-      </article>
-    </section>
 
-    <section class="grid2">
-      <article class="panel">
-        <div class="panel-head"><div><span class="section-kicker">GESTÃO</span><h3>S/C Piores</h3></div><small>Shipping médio E6+E7+E8</small></div>
-        <div id="sc" class="table-wrap"></div>
-      </article>
-      <article class="panel chart-panel">
-        <div class="panel-head"><div><span class="section-kicker">TENDÊNCIA</span><h3>Quadro evolutivo</h3></div><small id="evoHint">Histórico do recorte selecionado</small></div>
+      <article class="panel dashboard-square chart-panel">
+        <div class="panel-title">
+          <div>
+            <span class="section-kicker">TENDÊNCIA</span>
+            <h2>Quadro evolutivo</h2>
+            <span id="evoHint">Histórico do recorte selecionado</span>
+          </div>
+        </div>
         <div class="chart-box"><canvas id="evoChart"></canvas></div>
       </article>
     </section>
 
-    <footer>J&T Express · Shipping Time · Performance Last Mile</footer>
-  </div>
-  <script src="/static/app.js?v=20261026-2"></script>
+    <footer class="dashboard-footer">
+      <span>J&T Express • Shipping Time</span>
+      <span>Performance Last Mile</span>
+    </footer>
+  </main>
+
+  <script src="/static/app.js?v=20261026-sla-standard"></script>
 </body>
 </html>
