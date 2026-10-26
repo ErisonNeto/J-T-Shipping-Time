@@ -1,5 +1,5 @@
 let evoChart;
-let filtrosData = { scs: [], bases: [] };
+let filtrosData = { scs: [], cidades: [], bases: [] };
 
 const metas = {6: 25.6, 7: 6.0, 8: 23.4};
 const $ = s => document.querySelector(s);
@@ -27,6 +27,7 @@ function queryParams(){
   p.set('data_inicial', $('#dataInicial').value);
   p.set('data_final', $('#dataFinal').value);
   if($('#scSelect').value) p.set('sc', $('#scSelect').value);
+  if($('#cidadeSelect').value) p.set('cidade', $('#cidadeSelect').value);
   if($('#baseSelect').value) p.set('base', $('#baseSelect').value);
   return p;
 }
@@ -51,9 +52,9 @@ function updateStage(stage, valor){
 
 function tabelaBases(rows, meta){
   if(!rows.length) return '<div class="empty">Nenhuma base encontrada para este recorte.</div>';
-  return `<table class="rank"><thead><tr><th>Base</th><th>S/C</th><th>Horas</th><th>Pacotes</th></tr></thead><tbody>${rows.map(r=>{
+  return `<table class="rank rank-bases"><thead><tr><th>Base</th><th>Cidade</th><th>S/C</th><th>Horas</th><th>Pacotes</th></tr></thead><tbody>${rows.map(r=>{
     const cls = performanceClass(Number(r.horas), meta);
-    return `<tr><td><div class="base-name">${esc(r.base)}</div><small>${esc(r.codigo_base)}</small></td><td><span class="sc-name">${esc(r.sc || '-')}</span></td><td class="num"><span class="time-pill ${cls}">${fmtH(r.horas)}</span></td><td class="num">${fmtN(r.pacotes)}</td></tr>`;
+    return `<tr><td><div class="base-name">${esc(r.base)}</div><small>${esc(r.codigo_base)}</small></td><td><span class="city-name">${esc(r.cidade || '-')}</span></td><td><span class="sc-name">${esc(r.sc || '-')}</span></td><td class="num"><span class="time-pill ${cls}">${fmtH(r.horas)}</span></td><td class="num">${fmtN(r.pacotes)}</td></tr>`;
   }).join('')}</tbody></table>`;
 }
 
@@ -62,11 +63,24 @@ function tabelaSC(rows){
   return `<table class="rank"><thead><tr><th>S/C</th><th>Bases</th><th>Pacotes</th><th>E6</th><th>E7</th><th>E8</th><th>Total</th></tr></thead><tbody>${rows.map(r=>`<tr><td><div class="sc-main">${esc(r.sc)}</div></td><td class="num">${fmtN(r.bases)}</td><td class="num">${fmtN(r.pacotes)}</td><td class="num">${fmtH(r.etapa_6)}</td><td class="num">${fmtH(r.etapa_7)}</td><td class="num">${fmtH(r.etapa_8)}</td><td class="num"><span class="total-pill">${fmtH(r.total)}</span></td></tr>`).join('')}</tbody></table>`;
 }
 
-function atualizarBases(){
+function basesFiltradas(){
   const sc = $('#scSelect').value;
+  const cidade = $('#cidadeSelect').value;
+  return filtrosData.bases.filter(b => (!sc || b.sc === sc) && (!cidade || b.cidade === cidade));
+}
+
+function atualizarCidades(){
+  const sc = $('#scSelect').value;
+  const atual = $('#cidadeSelect').value;
+  const cidades = [...new Set(filtrosData.bases.filter(b => !sc || b.sc === sc).map(b => b.cidade).filter(Boolean))].sort((a,b)=>a.localeCompare(b, 'pt-BR'));
+  $('#cidadeSelect').innerHTML = '<option value="">Todas as cidades</option>' + cidades.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  if(cidades.includes(atual)) $('#cidadeSelect').value = atual;
+}
+
+function atualizarBases(){
   const atual = $('#baseSelect').value;
-  const bases = filtrosData.bases.filter(b => !sc || b.sc === sc);
-  $('#baseSelect').innerHTML = '<option value="">Todas as bases</option>' + bases.map(b => `<option value="${esc(b.base)}">${esc(b.base)} · ${fmtN(b.pacotes)} pct</option>`).join('');
+  const bases = basesFiltradas();
+  $('#baseSelect').innerHTML = '<option value="">Todas as bases</option>' + bases.map(b => `<option value="${esc(b.base)}">${esc(b.base)} · ${esc(b.cidade || 'Sem cidade')} · ${fmtN(b.pacotes)} pct</option>`).join('');
   if(bases.some(b => b.base === atual)) $('#baseSelect').value = atual;
 }
 
@@ -78,6 +92,7 @@ async function carregarFiltrosData(){
   const scAtual = $('#scSelect').value;
   $('#scSelect').innerHTML = '<option value="">Todos os S/C</option>' + filtrosData.scs.map(sc => `<option value="${esc(sc)}">${esc(sc)}</option>`).join('');
   if(filtrosData.scs.includes(scAtual)) $('#scSelect').value = scAtual;
+  atualizarCidades();
   atualizarBases();
 }
 
@@ -97,7 +112,7 @@ async function carregar(){
       get(`/api/piores-bases?${p}&etapa=7&limite=${top}`),
       get(`/api/piores-bases?${p}&etapa=8&limite=${top}`),
       get(`/api/piores-sc?${p}&limite=${top}`),
-      get(`/api/evolutivo?${p}`)
+      get(`/api/evolutivo?${p}`),
     ]);
 
     updateStage(6, k.etapa_6);
@@ -108,42 +123,53 @@ async function carregar(){
     $('#kBases').textContent = fmtN(k.bases);
     $('#kGargalo').textContent = `${k.gargalo} · ${fmtH(k.gargalo_h)}`;
 
-    const recorte = $('#baseSelect').value || $('#scSelect').value || 'Todas as bases';
-    $('#kRecorte').textContent = recorte;
+    const recorte = [$('#scSelect').value, $('#cidadeSelect').value, $('#baseSelect').value].filter(Boolean);
+    $('#kRecorte').textContent = recorte.length ? recorte.join(' · ') : 'Todas as bases';
 
     $('#b6').innerHTML = tabelaBases(b6, metas[6]);
     $('#b7').innerHTML = tabelaBases(b7, metas[7]);
     $('#b8').innerHTML = tabelaBases(b8, metas[8]);
     $('#sc').innerHTML = tabelaSC(sc);
-    renderEvo(evo);
-  } catch(e){
-    console.error(e);
-    ['#b6','#b7','#b8','#sc'].forEach(id => $(id).innerHTML = '<div class="empty">Sem dados para os filtros selecionados.</div>');
+    renderChart(evo);
+  } catch(err){
+    console.error(err);
+    $('#b6').innerHTML = '<div class="empty">Sem dados para os filtros selecionados.</div>';
+    $('#b7').innerHTML = '<div class="empty">Sem dados para os filtros selecionados.</div>';
+    $('#b8').innerHTML = '<div class="empty">Sem dados para os filtros selecionados.</div>';
+    $('#sc').innerHTML = '<div class="empty">Sem dados para os filtros selecionados.</div>';
+    $('#kp').textContent = '--';
+    $('#kt').textContent = '--';
+    $('#k6').textContent = '--';
+    $('#k7').textContent = '--';
+    $('#k8').textContent = '--';
+    $('#kBases').textContent = '--';
+    $('#kGargalo').textContent = '--';
+    if(evoChart){ evoChart.destroy(); evoChart = null; }
   }
 }
 
-function renderEvo(rows){
+function renderChart(rows){
   const ctx = $('#evoChart');
   if(evoChart) evoChart.destroy();
   evoChart = new Chart(ctx, {
-    type:'line',
-    data:{
-      labels: rows.map(r=>fmtDate(r.data)),
-      datasets:[
-        {label:'Etapa 6', data:rows.map(r=>r.etapa_6), borderColor:'#d71920', backgroundColor:'#d71920', borderWidth:2, pointRadius:3, tension:.3},
-        {label:'Etapa 7', data:rows.map(r=>r.etapa_7), borderColor:'#111827', backgroundColor:'#111827', borderWidth:2, pointRadius:3, tension:.3},
-        {label:'Etapa 8', data:rows.map(r=>r.etapa_8), borderColor:'#7b8189', backgroundColor:'#7b8189', borderWidth:2, pointRadius:3, tension:.3},
-        {label:'Total 6+7+8', data:rows.map(r=>r.total), borderColor:'#8b1117', backgroundColor:'#8b1117', borderWidth:3, pointRadius:4, tension:.3}
+    type: 'line',
+    data: {
+      labels: rows.map(r => fmtDate(r.data)),
+      datasets: [
+        {label:'Etapa 6', data: rows.map(r=>r.etapa_6), tension:.25, borderWidth:2},
+        {label:'Etapa 7', data: rows.map(r=>r.etapa_7), tension:.25, borderWidth:2},
+        {label:'Etapa 8', data: rows.map(r=>r.etapa_8), tension:.25, borderWidth:2},
+        {label:'Total 6+7+8', data: rows.map(r=>r.total), tension:.25, borderWidth:3},
       ]
     },
-    options:{
+    options: {
       responsive:true,
       maintainAspectRatio:false,
-      interaction:{mode:'index',intersect:false},
-      plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:8,padding:18}}},
+      interaction:{mode:'index', intersect:false},
+      plugins:{legend:{position:'bottom'}},
       scales:{
-        x:{grid:{display:false},ticks:{maxRotation:0}},
-        y:{beginAtZero:true,title:{display:true,text:'Horas'},grid:{color:'rgba(15,23,42,.06)'}}
+        y:{title:{display:true,text:'Horas'},grid:{color:'rgba(15,23,42,.06)'}},
+        x:{grid:{display:false}}
       }
     }
   });
@@ -164,19 +190,23 @@ async function init(){
   const datas = await get('/api/datas');
   if(!datas.length) throw new Error('Nenhuma data disponível');
   const d1 = dataD1();
-  $('#dataInicial').value = d1;
-  $('#dataFinal').value = d1;
+  const dataPadrao = datas.includes(d1) ? d1 : datas[0];
+  $('#dataInicial').value = dataPadrao;
+  $('#dataFinal').value = dataPadrao;
   await carregarFiltrosData();
 
   $('#dataInicial').addEventListener('change', atualizarPeriodo);
   $('#dataFinal').addEventListener('change', atualizarPeriodo);
-  $('#scSelect').addEventListener('change', async()=>{ atualizarBases(); await carregar(); });
+  $('#scSelect').addEventListener('change', async()=>{ atualizarCidades(); atualizarBases(); await carregar(); });
+  $('#cidadeSelect').addEventListener('change', async()=>{ atualizarBases(); await carregar(); });
   $('#baseSelect').addEventListener('change', carregar);
   $('#topSelect').addEventListener('change', carregar);
   $('#resetFilters').addEventListener('click', async()=>{
-    $('#dataInicial').value = d1;
-    $('#dataFinal').value = d1;
+    $('#dataInicial').value = dataPadrao;
+    $('#dataFinal').value = dataPadrao;
     $('#scSelect').value='';
+    $('#cidadeSelect').value='';
+    atualizarCidades();
     atualizarBases();
     $('#baseSelect').value='';
     $('#topSelect').value='0';

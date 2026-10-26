@@ -34,11 +34,19 @@ def buscar(data_inicial: str | None = None, data_final: str | None = None) -> li
     return q.execute().data or []
 
 
-def filtrar(rows: list[dict], sc: str | None = None, base: str | None = None) -> list[dict]:
+def filtrar(
+    rows: list[dict],
+    sc: str | None = None,
+    cidade: str | None = None,
+    base: str | None = None,
+) -> list[dict]:
     out = rows
     if sc:
         alvo = sc.strip().casefold()
         out = [r for r in out if (r.get("sc") or "").strip().casefold() == alvo]
+    if cidade:
+        alvo = cidade.strip().casefold()
+        out = [r for r in out if (r.get("cidade") or "").strip().casefold() == alvo]
     if base:
         alvo = base.strip().casefold()
         out = [r for r in out if (r.get("base") or "").strip().casefold() == alvo]
@@ -71,23 +79,28 @@ def filtros(data_inicial: str = Query(...), data_final: str = Query(...)):
     rows = buscar(data_inicial, data_final)
     scs = sorted({(r.get("sc") or "SEM S/C").strip() for r in rows if (r.get("sc") or "").strip()})
 
-    bases_ag: dict[tuple[str, str], dict] = {}
+    bases_ag: dict[tuple[str, str, str], dict] = {}
+    cidades = set()
     for r in rows:
         nome = (r.get("base") or "").strip()
         if not nome:
             continue
         sc = (r.get("sc") or "SEM S/C").strip()
-        key = (nome, sc)
+        cidade = (r.get("cidade") or "").strip()
+        if cidade:
+            cidades.add(cidade)
+        key = (nome, sc, cidade)
         a = bases_ag.setdefault(key, {
             "base": nome,
             "codigo_base": r.get("codigo_base"),
             "sc": sc,
+            "cidade": cidade,
             "pacotes": 0,
         })
         a["pacotes"] += int(r.get("pacotes") or 0)
 
-    bases = sorted(bases_ag.values(), key=lambda x: x["base"].casefold())
-    return {"scs": scs, "bases": bases}
+    bases = sorted(bases_ag.values(), key=lambda x: (x["base"].casefold(), x["cidade"].casefold()))
+    return {"scs": scs, "cidades": sorted(cidades, key=str.casefold), "bases": bases}
 
 
 @app.get("/api/kpis")
@@ -95,10 +108,11 @@ def kpis(
     data_inicial: str = Query(...),
     data_final: str = Query(...),
     sc: str | None = None,
+    cidade: str | None = None,
     base: str | None = None,
 ):
     validar_periodo(data_inicial, data_final)
-    rows = filtrar(buscar(data_inicial, data_final), sc=sc, base=base)
+    rows = filtrar(buscar(data_inicial, data_final), sc=sc, cidade=cidade, base=base)
     if not rows:
         raise HTTPException(404, "Sem dados para os filtros selecionados")
 
@@ -141,21 +155,24 @@ def piores_bases(
     etapa: int = Query(..., ge=6, le=8),
     limite: int = Query(0, ge=0, le=500),
     sc: str | None = None,
+    cidade: str | None = None,
     base: str | None = None,
 ):
     validar_periodo(data_inicial, data_final)
-    rows = filtrar(buscar(data_inicial, data_final), sc=sc, base=base)
+    rows = filtrar(buscar(data_inicial, data_final), sc=sc, cidade=cidade, base=base)
     campo = f"etapa_{etapa}_h"
 
-    ag: dict[tuple[str, str], dict] = {}
+    ag: dict[tuple[str, str, str], dict] = {}
     for r in rows:
         nome = (r.get("base") or "SEM BASE").strip()
         nome_sc = (r.get("sc") or "SEM S/C").strip()
-        key = (nome, nome_sc)
+        cidade_nome = (r.get("cidade") or "").strip()
+        key = (nome, nome_sc, cidade_nome)
         p = int(r.get("pacotes") or 0)
         a = ag.setdefault(key, {
             "base": nome,
             "codigo_base": r.get("codigo_base"),
+            "cidade": cidade_nome,
             "sc": nome_sc,
             "pacotes": 0,
             "soma_ponderada": 0.0,
@@ -170,6 +187,7 @@ def piores_bases(
         arr.append({
             "base": a["base"],
             "codigo_base": a["codigo_base"],
+            "cidade": a["cidade"],
             "sc": a["sc"],
             "pacotes": p,
             "horas": round(horas, 2),
@@ -185,10 +203,11 @@ def piores_sc(
     data_final: str = Query(...),
     limite: int = Query(0, ge=0, le=500),
     sc: str | None = None,
+    cidade: str | None = None,
     base: str | None = None,
 ):
     validar_periodo(data_inicial, data_final)
-    rows = filtrar(buscar(data_inicial, data_final), sc=sc, base=base)
+    rows = filtrar(buscar(data_inicial, data_final), sc=sc, cidade=cidade, base=base)
     ag: dict[str, dict] = {}
     for r in rows:
         nome_sc = (r.get("sc") or "SEM S/C").strip()
@@ -222,10 +241,11 @@ def evolutivo(
     data_inicial: str = Query(...),
     data_final: str = Query(...),
     sc: str | None = None,
+    cidade: str | None = None,
     base: str | None = None,
 ):
     validar_periodo(data_inicial, data_final)
-    rows = filtrar(buscar(data_inicial, data_final), sc=sc, base=base)
+    rows = filtrar(buscar(data_inicial, data_final), sc=sc, cidade=cidade, base=base)
     por_data: dict[str, dict] = {}
     for r in rows:
         d = r.get("data")

@@ -3,6 +3,7 @@ create table if not exists public.shipping_time_diario (
     data date not null,
     codigo_base bigint not null,
     base text not null,
+    cidade text,
     rm text,
     sc text,
     etapa_6_h numeric(12,4) not null default 0,
@@ -14,16 +15,19 @@ create table if not exists public.shipping_time_diario (
     unique (data, codigo_base)
 );
 
+alter table public.shipping_time_diario
+    add column if not exists cidade text;
+
 create index if not exists idx_shipping_time_data
 on public.shipping_time_diario(data desc);
 
 create index if not exists idx_shipping_time_sc
 on public.shipping_time_diario(sc);
 
-alter table public.shipping_time_diario enable row level security;
+create index if not exists idx_shipping_time_cidade
+on public.shipping_time_diario(cidade);
 
--- O backend usa service_role. Não exponha a service_role no navegador.
--- Se futuramente o frontend consultar o Supabase diretamente, crie políticas específicas.
+alter table public.shipping_time_diario enable row level security;
 
 grant all on table public.shipping_time_diario to service_role;
 grant usage, select on sequence public.shipping_time_diario_id_seq to service_role;
