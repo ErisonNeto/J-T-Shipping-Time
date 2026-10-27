@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#d71920" />
   <title>J&T Express | Shipping Time</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" />
-  <link rel="stylesheet" href="/static/style.css?v=20261026-sla-standard" />
+  <link rel="stylesheet" href="/static/style.css?v=20261027-render-fix" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -39,34 +39,12 @@
       </div>
 
       <div class="filters-grid shipping-filters-grid">
-        <label class="filter-card">
-          <span>Data inicial</span>
-          <input id="dataInicial" type="date" />
-        </label>
-        <label class="filter-card">
-          <span>Data final</span>
-          <input id="dataFinal" type="date" />
-        </label>
-        <label class="filter-card">
-          <span>S/C</span>
-          <select id="scSelect"><option value="">Todos os S/C</option></select>
-        </label>
-        <label class="filter-card">
-          <span>Cidade</span>
-          <select id="cidadeSelect"><option value="">Todas as cidades</option></select>
-        </label>
-        <label class="filter-card">
-          <span>Base</span>
-          <select id="baseSelect"><option value="">Todas as bases</option></select>
-        </label>
-        <label class="filter-card">
-          <span>Ranking</span>
-          <select id="topSelect">
-            <option value="0" selected>Todas as bases</option>
-            <option value="20">Top 20</option>
-            <option value="50">Top 50</option>
-          </select>
-        </label>
+        <label class="filter-card"><span>Data inicial</span><input id="dataInicial" type="date" /></label>
+        <label class="filter-card"><span>Data final</span><input id="dataFinal" type="date" /></label>
+        <label class="filter-card"><span>S/C</span><select id="scSelect"><option value="">Todos os S/C</option></select></label>
+        <label class="filter-card"><span>Cidade</span><select id="cidadeSelect"><option value="">Todas as cidades</option></select></label>
+        <label class="filter-card"><span>Base</span><select id="baseSelect"><option value="">Todas as bases</option></select></label>
+        <label class="filter-card"><span>Ranking</span><select id="topSelect"><option value="0" selected>Todas as bases</option><option value="20">Top 20</option><option value="50">Top 50</option></select></label>
       </div>
     </section>
 
@@ -100,14 +78,7 @@
     </section>
 
     <section class="panel ranking-section">
-      <div class="panel-title">
-        <div>
-          <span class="section-kicker">RANKING OPERACIONAL</span>
-          <h2>Piores bases por etapa</h2>
-          <span>Quanto maior o tempo, pior a performance operacional.</span>
-        </div>
-      </div>
-
+      <div class="panel-title"><div><span class="section-kicker">RANKING OPERACIONAL</span><h2>Piores bases por etapa</h2><span>Quanto maior o tempo, pior a performance operacional.</span></div></div>
       <div class="stage-stack">
         <article class="stage-panel">
           <div class="stage-head"><div><span class="stage-chip">E6</span><h3>SC Destino → Base</h3></div><small>Meta 25,6 h</small></div>
@@ -126,34 +97,18 @@
 
     <section class="dashboard-grid">
       <article class="panel dashboard-square">
-        <div class="panel-title">
-          <div>
-            <span class="section-kicker">GESTÃO</span>
-            <h2>S/C Piores</h2>
-            <span>Shipping médio consolidado das etapas 6, 7 e 8</span>
-          </div>
-        </div>
+        <div class="panel-title"><div><span class="section-kicker">GESTÃO</span><h2>S/C Piores</h2><span>Shipping médio consolidado das etapas 6, 7 e 8</span></div></div>
         <div id="sc" class="table-wrap square-table"></div>
       </article>
-
       <article class="panel dashboard-square chart-panel">
-        <div class="panel-title">
-          <div>
-            <span class="section-kicker">TENDÊNCIA</span>
-            <h2>Quadro evolutivo</h2>
-            <span id="evoHint">Histórico do recorte selecionado</span>
-          </div>
-        </div>
+        <div class="panel-title"><div><span class="section-kicker">TENDÊNCIA</span><h2>Quadro evolutivo</h2><span id="evoHint">Histórico do recorte selecionado</span></div></div>
         <div class="chart-box"><canvas id="evoChart"></canvas></div>
       </article>
     </section>
 
-    <footer class="dashboard-footer">
-      <span>J&T Express • Shipping Time</span>
-      <span>Performance Last Mile</span>
-    </footer>
+    <footer class="dashboard-footer"><span>J&T Express • Shipping Time</span><span>Performance Last Mile</span></footer>
   </main>
 
-  <script src="/static/app.js?v=20261026-sla-standard"></script>
+  <script src="/static/app.js?v=20261027-render-fix"></script>
 </body>
 </html>
