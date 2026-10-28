@@ -64,9 +64,9 @@ function tabelaBases(rows, meta) {
 
 function tabelaCidades(rows) {
   if (!rows.length) return '<div class="empty">Sem cidades destino mapeadas para este recorte. Importe a carta de porte junto com o Shipping Time.</div>';
-  return `<table class="rank rank-bases"><thead><tr><th>Base</th><th>Cidade da base</th><th>Cidade atendida</th><th>S/C</th><th>E8 médio</th><th>Pacotes</th></tr></thead><tbody>${rows.map((r) => {
+  return `<table class="rank rank-bases"><thead><tr><th>Base</th><th>Cidade atendida</th><th>E8 médio</th><th>Pacotes</th></tr></thead><tbody>${rows.map((r) => {
     const cls = performanceClass(Number(r.horas), metas[8]);
-    return `<tr><td><div class="base-name">${esc(r.base)}</div><small>${esc(r.codigo_base)}</small></td><td><span class="city-name">${esc(r.cidade_base || '-')}</span></td><td><span class="city-name"><strong>${esc(r.cidade_destino || '-')}</strong></span></td><td><span class="sc-name">${esc(r.sc || '-')}</span></td><td class="num"><span class="time-pill ${cls}">${fmtH(r.horas)}</span></td><td class="num">${fmtN(r.pacotes)}</td></tr>`;
+    return `<tr><td><div class="base-name">${esc(r.base)}</div><small>${esc(r.codigo_base)}</small></td><td><span class="city-name"><strong>${esc(r.cidade_destino || '-')}</strong></span></td><td class="num"><span class="time-pill ${cls}">${fmtH(r.horas)}</span></td><td class="num">${fmtN(r.pacotes)}</td></tr>`;
   }).join('')}</tbody></table>`;
 }
 
