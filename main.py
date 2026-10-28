@@ -34,12 +34,21 @@ def buscar(data_inicial: str | None = None, data_final: str | None = None) -> li
     return q.execute().data or []
 
 
-def filtrar(
-    rows: list[dict],
-    sc: str | None = None,
-    cidade: str | None = None,
-    base: str | None = None,
-) -> list[dict]:
+def buscar_cidades(data_inicial: str | None = None, data_final: str | None = None) -> list[dict]:
+    sb = get_supabase()
+    try:
+        q = sb.table("shipping_time_cidade_diario").select("*")
+        if data_inicial:
+            q = q.gte("data", data_inicial)
+        if data_final:
+            q = q.lte("data", data_final)
+        return q.execute().data or []
+    except Exception:
+        # Mantém o dashboard principal funcional mesmo antes da criação da tabela nova.
+        return []
+
+
+def filtrar(rows: list[dict], sc: str | None = None, cidade: str | None = None, base: str | None = None) -> list[dict]:
     out = rows
     if sc:
         alvo = sc.strip().casefold()
@@ -47,6 +56,20 @@ def filtrar(
     if cidade:
         alvo = cidade.strip().casefold()
         out = [r for r in out if (r.get("cidade") or "").strip().casefold() == alvo]
+    if base:
+        alvo = base.strip().casefold()
+        out = [r for r in out if (r.get("base") or "").strip().casefold() == alvo]
+    return out
+
+
+def filtrar_cidades(rows: list[dict], sc: str | None = None, cidade: str | None = None, base: str | None = None) -> list[dict]:
+    out = rows
+    if sc:
+        alvo = sc.strip().casefold()
+        out = [r for r in out if (r.get("sc") or "").strip().casefold() == alvo]
+    if cidade:
+        alvo = cidade.strip().casefold()
+        out = [r for r in out if (r.get("cidade_base") or "").strip().casefold() == alvo]
     if base:
         alvo = base.strip().casefold()
         out = [r for r in out if (r.get("base") or "").strip().casefold() == alvo]
@@ -71,8 +94,6 @@ def atualizar_atributos_base(a: dict, r: dict) -> None:
     sc = (r.get("sc") or "").strip()
     nome = (r.get("base") or "").strip()
 
-    # Mantém os atributos mais recentes e, principalmente, não deixa
-    # uma cidade vazia sobrescrever uma cidade já conhecida.
     if cidade and (not a.get("cidade") or data >= a.get("_data_cidade", "")):
         a["cidade"] = cidade
         a["_data_cidade"] = data
@@ -164,13 +185,8 @@ def kpis(
     e6, e7, e8 = s6 / total_pacotes, s7 / total_pacotes, s8 / total_pacotes
     total_medio = (s6 + s7 + s8) / total_pacotes
 
-    etapas = [
-        ("Etapa 6", e6, META_E6),
-        ("Etapa 7", e7, META_E7),
-        ("Etapa 8", e8, META_E8),
-    ]
+    etapas = [("Etapa 6", e6, META_E6), ("Etapa 7", e7, META_E7), ("Etapa 8", e8, META_E8)]
     gargalo = max(etapas, key=lambda x: (x[1] / x[2]) if x[2] else 0)
-
     bases_unicas = {(r.get("codigo_base"), r.get("base")) for r in rows}
 
     return {
@@ -233,6 +249,60 @@ def piores_bases(
 
     arr.sort(key=lambda x: (x["horas"], x["pacotes"]), reverse=True)
     return arr if limite == 0 else arr[:limite]
+
+
+@app.get("/api/cidades-atendidas")
+def cidades_atendidas(
+    data_inicial: str = Query(...),
+    data_final: str = Query(...),
+    limite: int = Query(0, ge=0, le=1000),
+    sc: str | None = None,
+    cidade: str | None = None,
+    base: str | None = None,
+):
+    validar_periodo(data_inicial, data_final)
+    rows = filtrar_cidades(buscar_cidades(data_inicial, data_final), sc=sc, cidade=cidade, base=base)
+
+    ag: dict[tuple[str, str], dict] = {}
+    for r in rows:
+        codigo = str(r.get("codigo_base") or (r.get("base") or "").strip().casefold())
+        destino = (r.get("cidade_destino") or "SEM CIDADE").strip()
+        key = (codigo, destino.casefold())
+        p = int(r.get("pacotes") or 0)
+        data = str(r.get("data") or "")
+        a = ag.setdefault(key, {
+            "base": (r.get("base") or "SEM BASE").strip(),
+            "codigo_base": r.get("codigo_base"),
+            "cidade_base": (r.get("cidade_base") or "").strip(),
+            "cidade_destino": destino,
+            "sc": (r.get("sc") or "SEM S/C").strip(),
+            "pacotes": 0,
+            "soma_ponderada": 0.0,
+            "_data": data,
+        })
+        if data >= a.get("_data", ""):
+            a["base"] = (r.get("base") or a["base"]).strip()
+            a["cidade_base"] = (r.get("cidade_base") or a["cidade_base"]).strip()
+            a["sc"] = (r.get("sc") or a["sc"]).strip()
+            a["_data"] = data
+        a["pacotes"] += p
+        a["soma_ponderada"] += float(r.get("etapa_8_h") or 0) * p
+
+    out = []
+    for a in ag.values():
+        p = a["pacotes"]
+        out.append({
+            "base": a["base"],
+            "codigo_base": a["codigo_base"],
+            "cidade_base": a["cidade_base"],
+            "cidade_destino": a["cidade_destino"],
+            "sc": a["sc"],
+            "pacotes": p,
+            "horas": round(a["soma_ponderada"] / p, 2) if p else 0,
+        })
+
+    out.sort(key=lambda x: (x["horas"], x["pacotes"]), reverse=True)
+    return out if limite == 0 else out[:limite]
 
 
 @app.get("/api/piores-sc")
