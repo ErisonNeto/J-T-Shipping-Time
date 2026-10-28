@@ -58,6 +58,32 @@ def validar_periodo(data_inicial: str, data_final: str):
         raise HTTPException(400, "Data inicial não pode ser maior que a data final")
 
 
+def chave_base(r: dict):
+    codigo = r.get("codigo_base")
+    if codigo not in (None, ""):
+        return str(codigo)
+    return (r.get("base") or "SEM BASE").strip().casefold()
+
+
+def atualizar_atributos_base(a: dict, r: dict) -> None:
+    data = str(r.get("data") or "")
+    cidade = (r.get("cidade") or "").strip()
+    sc = (r.get("sc") or "").strip()
+    nome = (r.get("base") or "").strip()
+
+    # Mantém os atributos mais recentes e, principalmente, não deixa
+    # uma cidade vazia sobrescrever uma cidade já conhecida.
+    if cidade and (not a.get("cidade") or data >= a.get("_data_cidade", "")):
+        a["cidade"] = cidade
+        a["_data_cidade"] = data
+    if sc and (not a.get("sc") or data >= a.get("_data_sc", "")):
+        a["sc"] = sc
+        a["_data_sc"] = data
+    if nome and (not a.get("base") or data >= a.get("_data_base", "")):
+        a["base"] = nome
+        a["_data_base"] = data
+
+
 @app.get("/api/datas")
 def datas():
     sb = get_supabase()
@@ -79,27 +105,38 @@ def filtros(data_inicial: str = Query(...), data_final: str = Query(...)):
     rows = buscar(data_inicial, data_final)
     scs = sorted({(r.get("sc") or "SEM S/C").strip() for r in rows if (r.get("sc") or "").strip()})
 
-    bases_ag: dict[tuple[str, str, str], dict] = {}
+    bases_ag: dict[str, dict] = {}
     cidades = set()
     for r in rows:
         nome = (r.get("base") or "").strip()
         if not nome:
             continue
-        sc = (r.get("sc") or "SEM S/C").strip()
         cidade = (r.get("cidade") or "").strip()
         if cidade:
             cidades.add(cidade)
-        key = (nome, sc, cidade)
+
+        key = chave_base(r)
         a = bases_ag.setdefault(key, {
             "base": nome,
             "codigo_base": r.get("codigo_base"),
-            "sc": sc,
+            "sc": (r.get("sc") or "SEM S/C").strip(),
             "cidade": cidade,
             "pacotes": 0,
+            "_data_base": "",
+            "_data_sc": "",
+            "_data_cidade": "",
         })
+        atualizar_atributos_base(a, r)
         a["pacotes"] += int(r.get("pacotes") or 0)
 
-    bases = sorted(bases_ag.values(), key=lambda x: (x["base"].casefold(), x["cidade"].casefold()))
+    bases = []
+    for a in bases_ag.values():
+        a.pop("_data_base", None)
+        a.pop("_data_sc", None)
+        a.pop("_data_cidade", None)
+        bases.append(a)
+
+    bases.sort(key=lambda x: (x["base"].casefold(), x["cidade"].casefold()))
     return {"scs": scs, "cidades": sorted(cidades, key=str.casefold), "bases": bases}
 
 
@@ -162,21 +199,22 @@ def piores_bases(
     rows = filtrar(buscar(data_inicial, data_final), sc=sc, cidade=cidade, base=base)
     campo = f"etapa_{etapa}_h"
 
-    ag: dict[tuple[str, str, str], dict] = {}
+    ag: dict[str, dict] = {}
     for r in rows:
-        nome = (r.get("base") or "SEM BASE").strip()
-        nome_sc = (r.get("sc") or "SEM S/C").strip()
-        cidade_nome = (r.get("cidade") or "").strip()
-        key = (nome, nome_sc, cidade_nome)
+        key = chave_base(r)
         p = int(r.get("pacotes") or 0)
         a = ag.setdefault(key, {
-            "base": nome,
+            "base": (r.get("base") or "SEM BASE").strip(),
             "codigo_base": r.get("codigo_base"),
-            "cidade": cidade_nome,
-            "sc": nome_sc,
+            "cidade": (r.get("cidade") or "").strip(),
+            "sc": (r.get("sc") or "SEM S/C").strip(),
             "pacotes": 0,
             "soma_ponderada": 0.0,
+            "_data_base": "",
+            "_data_sc": "",
+            "_data_cidade": "",
         })
+        atualizar_atributos_base(a, r)
         a["pacotes"] += p
         a["soma_ponderada"] += float(r.get(campo) or 0) * p
 
