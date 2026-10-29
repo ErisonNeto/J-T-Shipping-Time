@@ -17,10 +17,26 @@ const dataD1 = () => {
   return `${y}-${m}-${day}`;
 };
 
+function shiftDate(iso, days) {
+  const [y, m, d] = iso.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + days);
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+}
+
 async function get(url) {
   const r = await fetch(url, { cache: 'no-store' });
   if (!r.ok) throw new Error(await r.text());
   return r.json();
+}
+
+async function getOptional(url, fallback) {
+  try {
+    return await get(url);
+  } catch (e) {
+    console.warn('Comparação semanal indisponível:', url, e);
+    return fallback;
+  }
 }
 
 function queryParams() {
@@ -33,10 +49,37 @@ function queryParams() {
   return p;
 }
 
+function queryParamsSemanaAnterior() {
+  const p = new URLSearchParams();
+  p.set('data_inicial', shiftDate($('#dataInicial').value, -7));
+  p.set('data_final', shiftDate($('#dataFinal').value, -7));
+  if ($('#scSelect').value) p.set('sc', $('#scSelect').value);
+  if ($('#cidadeSelect').value) p.set('cidade', $('#cidadeSelect').value);
+  if ($('#baseSelect').value) p.set('base', $('#baseSelect').value);
+  return p;
+}
+
 function performanceClass(valor, meta) {
   if (valor <= meta) return 'ok';
   if (valor <= meta * 1.15) return 'warn';
   return 'bad';
+}
+
+function variacaoPct(atual, anterior) {
+  const a = Number(atual);
+  const b = Number(anterior);
+  if (!Number.isFinite(a) || !Number.isFinite(b) || b <= 0) return null;
+  return ((a - b) / b) * 100;
+}
+
+function variationBadge(atual, anterior) {
+  const v = variacaoPct(atual, anterior);
+  if (v === null) return '<span class="variation-pill neutral">Sem base</span>';
+  if (Math.abs(v) < 0.05) return '<span class="variation-pill neutral">0,0%</span>';
+  const melhorou = v < 0;
+  const arrow = melhorou ? '↓' : '↑';
+  const cls = melhorou ? 'good' : 'bad';
+  return `<span class="variation-pill ${cls}" title="Comparação com o mesmo recorte 7 dias antes">${arrow} ${Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%</span>`;
 }
 
 function updateStage(stage, valor) {
@@ -62,11 +105,17 @@ function tabelaBases(rows, meta) {
   }).join('')}</tbody></table>`;
 }
 
-function tabelaCidades(rows) {
+function chaveCidade(r) {
+  return `${String(r.codigo_base ?? r.base ?? '').trim().toLowerCase()}|${String(r.cidade_destino ?? '').trim().toLowerCase()}`;
+}
+
+function tabelaCidades(rows, anteriores = []) {
   if (!rows.length) return '<div class="empty">Sem cidades destino mapeadas para este recorte. Importe a carta de porte junto com o Shipping Time.</div>';
-  return `<table class="rank rank-bases"><thead><tr><th>Base</th><th>Cidade atendida</th><th>E8 médio</th><th>Pacotes</th></tr></thead><tbody>${rows.map((r) => {
+  const prevMap = new Map(anteriores.map((r) => [chaveCidade(r), r]));
+  return `<table class="rank rank-bases"><thead><tr><th>Base</th><th>Cidade atendida</th><th>E8 médio</th><th>Variação 7d</th><th>Pacotes</th></tr></thead><tbody>${rows.map((r) => {
     const cls = performanceClass(Number(r.horas), metas[8]);
-    return `<tr><td><div class="base-name">${esc(r.base)}</div><small>${esc(r.codigo_base)}</small></td><td><span class="city-name"><strong>${esc(r.cidade_destino || '-')}</strong></span></td><td class="num"><span class="time-pill ${cls}">${fmtH(r.horas)}</span></td><td class="num">${fmtN(r.pacotes)}</td></tr>`;
+    const ant = prevMap.get(chaveCidade(r));
+    return `<tr><td><div class="base-name">${esc(r.base)}</div><small>${esc(r.codigo_base)}</small></td><td><span class="city-name"><strong>${esc(r.cidade_destino || '-')}</strong></span></td><td class="num"><span class="time-pill ${cls}">${fmtH(r.horas)}</span></td><td class="num">${variationBadge(r.horas, ant?.horas)}</td><td class="num">${fmtN(r.pacotes)}</td></tr>`;
   }).join('')}</tbody></table>`;
 }
 
@@ -125,15 +174,18 @@ async function carregar() {
   $('#dataTitulo').textContent = di === df ? fmtDate(di) : `${fmtDate(di)} → ${fmtDate(df)}`;
 
   const p = queryParams();
+  const pPrev = queryParamsSemanaAnterior();
   const top = $('#topSelect').value || '0';
 
   try {
-    const [k, b6, b7, b8, cidadesAtendidas, sc, evo] = await Promise.all([
+    const [k, kPrev, b6, b7, b8, cidadesAtendidas, cidadesPrev, sc, evo] = await Promise.all([
       get(`/api/kpis?${p}`),
+      getOptional(`/api/kpis?${pPrev}`, null),
       get(`/api/piores-bases?${p}&etapa=6&limite=${top}`),
       get(`/api/piores-bases?${p}&etapa=7&limite=${top}`),
       get(`/api/piores-bases?${p}&etapa=8&limite=${top}`),
       get(`/api/cidades-atendidas?${p}&limite=${top}`),
+      getOptional(`/api/cidades-atendidas?${pPrev}&limite=0`, []),
       get(`/api/piores-sc?${p}&limite=${top}`),
       get(`/api/evolutivo?${p}`)
     ]);
@@ -141,6 +193,9 @@ async function carregar() {
     updateStage(6, k.etapa_6);
     updateStage(7, k.etapa_7);
     updateStage(8, k.etapa_8);
+
+    const k8Var = $('#k8Var');
+    if (k8Var) k8Var.innerHTML = variationBadge(k.etapa_8, kPrev?.etapa_8);
 
     $('#kp').textContent = fmtN(k.pacotes);
     $('#kt').textContent = fmtH(k.total_6_8);
@@ -153,7 +208,7 @@ async function carregar() {
     $('#b6').innerHTML = tabelaBases(b6, metas[6]);
     $('#b7').innerHTML = tabelaBases(b7, metas[7]);
     $('#b8').innerHTML = tabelaBases(b8, metas[8]);
-    $('#cidadesAtendidas').innerHTML = tabelaCidades(cidadesAtendidas);
+    $('#cidadesAtendidas').innerHTML = tabelaCidades(cidadesAtendidas, cidadesPrev);
     $('#sc').innerHTML = tabelaSC(sc);
 
     renderChart(evo);
@@ -171,6 +226,8 @@ async function carregar() {
       const el = $(id);
       if (el) el.textContent = '--';
     });
+    const k8Var = $('#k8Var');
+    if (k8Var) k8Var.innerHTML = '';
 
     if (evoChart) {
       evoChart.destroy();
