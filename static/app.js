@@ -228,6 +228,11 @@ async function carregar() {
     $('#kt').textContent = fmtH(k.total_6_8);
     $('#kBases').textContent = fmtN(k.bases);
     $('#kGargalo').textContent = `${k.gargalo} · ${fmtH(k.gargalo_h)}`;
+    const gargaloVar = $('#kGargaloVar');
+    if (gargaloVar) {
+      const etapaAnterior = Number(String(k.gargalo || '').match(/[678]/)?.[0]);
+      gargaloVar.innerHTML = variationBadge(k.gargalo_h, kPrev?.[`etapa_${etapaAnterior}`]);
+    }
 
     const recorte = [$('#scSelect').value, $('#cidadeSelect').value, $('#baseSelect').value].filter(Boolean);
     $('#kRecorte').textContent = recorte.length ? recorte.join(' · ') : 'Todas as bases';
@@ -254,7 +259,7 @@ async function carregar() {
       const el = $(id);
       if (el) el.textContent = '--';
     });
-    ['#k6Var', '#k7Var', '#k8Var', '#kpVar', '#ktVar', '#kBasesVar'].forEach(id => { const el = $(id); if (el) el.innerHTML = ''; });
+    ['#k6Var', '#k7Var', '#k8Var', '#kpVar', '#ktVar', '#kBasesVar', '#kGargaloVar'].forEach(id => { const el = $(id); if (el) el.innerHTML = ''; });
 
     if (evoChart) {
       evoChart.destroy();
