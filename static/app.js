@@ -110,10 +110,10 @@ function chaveBase(r) { return String(r.codigo_base ?? r.base ?? '').trim().toLo
 function tabelaBases(rows, meta, anteriores = []) {
   const anterioresMap = new Map(anteriores.map(r => [chaveBase(r), r]));
   if (!rows.length) return '<div class="empty">Nenhuma base encontrada para este recorte.</div>';
-  return `<table class="rank rank-bases"><thead><tr><th>Base</th><th>Cidade</th><th>S/C</th><th>Horas</th><th>Variação 7d</th><th>Pacotes</th></tr></thead><tbody>${rows.map((r) => {
+  return `<table class="rank rank-bases"><thead><tr><th>Base</th><th>Cidade</th><th>S/C</th><th>Horas</th><th>Variação 7d</th><th>Pacotes</th><th>Δ Pacotes</th></tr></thead><tbody>${rows.map((r) => {
     const cls = performanceClass(Number(r.horas), meta);
     const anterior = anterioresMap.get(chaveBase(r));
-    return `<tr><td><div class="base-name">${esc(r.base)}</div><small>${esc(r.codigo_base)}</small></td><td><span class="city-name">${esc(r.cidade || '-')}</span></td><td><span class="sc-name">${esc(r.sc || '-')}</span></td><td class="num"><span class="time-pill ${cls}">${fmtH(r.horas)}</span></td><td class="num">${variationBadge(r.horas, anterior?.horas)}</td><td class="num">${fmtN(r.pacotes)}</td></tr>`;
+    return `<tr><td><div class="base-name">${esc(r.base)}</div><small>${esc(r.codigo_base)}</small></td><td><span class="city-name">${esc(r.cidade || '-')}</span></td><td><span class="sc-name">${esc(r.sc || '-')}</span></td><td class="num"><span class="time-pill ${cls}">${fmtH(r.horas)}</span></td><td class="num">${variationBadge(r.horas, anterior?.horas)}</td><td class="num">${fmtN(r.pacotes)}</td><td class="num">${variationBadgeVolume(r.pacotes, anterior?.pacotes)}</td></tr>`;
   }).join('')}</tbody></table>`;
 }
 
@@ -124,19 +124,19 @@ function chaveCidade(r) {
 function tabelaCidades(rows, anteriores = []) {
   if (!rows.length) return '<div class="empty">Sem cidades destino mapeadas para este recorte. Importe a carta de porte junto com o Shipping Time.</div>';
   const prevMap = new Map(anteriores.map((r) => [chaveCidade(r), r]));
-  return `<table class="rank rank-bases"><thead><tr><th>Base</th><th>Cidade atendida</th><th>E8 médio</th><th>Variação 7d</th><th>Pacotes</th></tr></thead><tbody>${rows.map((r) => {
+  return `<table class="rank rank-bases"><thead><tr><th>Base</th><th>Cidade atendida</th><th>E8 médio</th><th>Variação 7d</th><th>Pacotes</th><th>Δ Pacotes</th></tr></thead><tbody>${rows.map((r) => {
     const cls = performanceClass(Number(r.horas), metas[8]);
     const ant = prevMap.get(chaveCidade(r));
-    return `<tr><td><div class="base-name">${esc(r.base)}</div><small>${esc(r.codigo_base)}</small></td><td><span class="city-name"><strong>${esc(r.cidade_destino || '-')}</strong></span></td><td class="num"><span class="time-pill ${cls}">${fmtH(r.horas)}</span></td><td class="num">${variationBadge(r.horas, ant?.horas)}</td><td class="num">${fmtN(r.pacotes)}</td></tr>`;
+    return `<tr><td><div class="base-name">${esc(r.base)}</div><small>${esc(r.codigo_base)}</small></td><td><span class="city-name"><strong>${esc(r.cidade_destino || '-')}</strong></span></td><td class="num"><span class="time-pill ${cls}">${fmtH(r.horas)}</span></td><td class="num">${variationBadge(r.horas, ant?.horas)}</td><td class="num">${fmtN(r.pacotes)}</td><td class="num">${variationBadgeVolume(r.pacotes, ant?.pacotes)}</td></tr>`;
   }).join('')}</tbody></table>`;
 }
 
 function tabelaSC(rows, anteriores = []) {
   if (!rows.length) return '<div class="empty">Nenhum S/C encontrado para este recorte.</div>';
   const mapa = new Map(anteriores.map(r => [String(r.sc || '').trim().toLowerCase(), r]));
-  return `<table class="rank"><thead><tr><th>S/C</th><th>Bases</th><th>Pacotes</th><th>E6</th><th>Δ E6</th><th>E7</th><th>Δ E7</th><th>E8</th><th>Δ E8</th><th>Total</th><th>Δ Total</th></tr></thead><tbody>${rows.map((r) => {
+  return `<table class="rank"><thead><tr><th>S/C</th><th>Bases</th><th>Δ Bases</th><th>Pacotes</th><th>Δ Pacotes</th><th>E6</th><th>Δ E6</th><th>E7</th><th>Δ E7</th><th>E8</th><th>Δ E8</th><th>Total</th><th>Δ Total</th></tr></thead><tbody>${rows.map((r) => {
     const ant = mapa.get(String(r.sc || '').trim().toLowerCase());
-    return `<tr><td><div class="sc-main">${esc(r.sc)}</div></td><td class="num">${fmtN(r.bases)}</td><td class="num">${fmtN(r.pacotes)}</td><td class="num">${fmtH(r.etapa_6)}</td><td class="num">${variationBadge(r.etapa_6, ant?.etapa_6)}</td><td class="num">${fmtH(r.etapa_7)}</td><td class="num">${variationBadge(r.etapa_7, ant?.etapa_7)}</td><td class="num">${fmtH(r.etapa_8)}</td><td class="num">${variationBadge(r.etapa_8, ant?.etapa_8)}</td><td class="num"><span class="total-pill">${fmtH(r.total)}</span></td><td class="num">${variationBadge(r.total, ant?.total)}</td></tr>`;
+    return `<tr><td><div class="sc-main">${esc(r.sc)}</div></td><td class="num">${fmtN(r.bases)}</td><td class="num">${variationBadgeVolume(r.bases, ant?.bases)}</td><td class="num">${fmtN(r.pacotes)}</td><td class="num">${variationBadgeVolume(r.pacotes, ant?.pacotes)}</td><td class="num">${fmtH(r.etapa_6)}</td><td class="num">${variationBadge(r.etapa_6, ant?.etapa_6)}</td><td class="num">${fmtH(r.etapa_7)}</td><td class="num">${variationBadge(r.etapa_7, ant?.etapa_7)}</td><td class="num">${fmtH(r.etapa_8)}</td><td class="num">${variationBadge(r.etapa_8, ant?.etapa_8)}</td><td class="num"><span class="total-pill">${fmtH(r.total)}</span></td><td class="num">${variationBadge(r.total, ant?.total)}</td></tr>`;
   }).join('')}</tbody></table>`;
 }
 
