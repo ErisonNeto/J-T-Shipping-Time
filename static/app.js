@@ -82,6 +82,14 @@ function variationBadge(atual, anterior) {
   return `<span class="variation-pill ${cls}" title="Comparação com o mesmo recorte 7 dias antes">${arrow} ${Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%</span>`;
 }
 
+function variationBadgeVolume(atual, anterior) {
+  const v = variacaoPct(atual, anterior);
+  if (v === null) return '<span class="variation-pill neutral">Sem base</span>';
+  if (Math.abs(v) < 0.05) return '<span class="variation-pill neutral">0,0%</span>';
+  const positivo = v > 0;
+  return `<span class="variation-pill neutral" title="Variação de volume: não indica necessariamente melhora">${positivo ? '↑' : '↓'} ${Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%</span>`;
+}
+
 function updateStage(stage, valor) {
   const valueEl = $(`#k${stage}`);
   if (valueEl) valueEl.textContent = fmtH(valor);
@@ -97,11 +105,15 @@ function updateStage(stage, valor) {
   }
 }
 
-function tabelaBases(rows, meta) {
+function chaveBase(r) { return String(r.codigo_base ?? r.base ?? '').trim().toLowerCase(); }
+
+function tabelaBases(rows, meta, anteriores = []) {
+  const anterioresMap = new Map(anteriores.map(r => [chaveBase(r), r]));
   if (!rows.length) return '<div class="empty">Nenhuma base encontrada para este recorte.</div>';
-  return `<table class="rank rank-bases"><thead><tr><th>Base</th><th>Cidade</th><th>S/C</th><th>Horas</th><th>Pacotes</th></tr></thead><tbody>${rows.map((r) => {
+  return `<table class="rank rank-bases"><thead><tr><th>Base</th><th>Cidade</th><th>S/C</th><th>Horas</th><th>Variação 7d</th><th>Pacotes</th></tr></thead><tbody>${rows.map((r) => {
     const cls = performanceClass(Number(r.horas), meta);
-    return `<tr><td><div class="base-name">${esc(r.base)}</div><small>${esc(r.codigo_base)}</small></td><td><span class="city-name">${esc(r.cidade || '-')}</span></td><td><span class="sc-name">${esc(r.sc || '-')}</span></td><td class="num"><span class="time-pill ${cls}">${fmtH(r.horas)}</span></td><td class="num">${fmtN(r.pacotes)}</td></tr>`;
+    const anterior = anterioresMap.get(chaveBase(r));
+    return `<tr><td><div class="base-name">${esc(r.base)}</div><small>${esc(r.codigo_base)}</small></td><td><span class="city-name">${esc(r.cidade || '-')}</span></td><td><span class="sc-name">${esc(r.sc || '-')}</span></td><td class="num"><span class="time-pill ${cls}">${fmtH(r.horas)}</span></td><td class="num">${variationBadge(r.horas, anterior?.horas)}</td><td class="num">${fmtN(r.pacotes)}</td></tr>`;
   }).join('')}</tbody></table>`;
 }
 
@@ -119,9 +131,13 @@ function tabelaCidades(rows, anteriores = []) {
   }).join('')}</tbody></table>`;
 }
 
-function tabelaSC(rows) {
+function tabelaSC(rows, anteriores = []) {
   if (!rows.length) return '<div class="empty">Nenhum S/C encontrado para este recorte.</div>';
-  return `<table class="rank"><thead><tr><th>S/C</th><th>Bases</th><th>Pacotes</th><th>E6</th><th>E7</th><th>E8</th><th>Total</th></tr></thead><tbody>${rows.map((r) => `<tr><td><div class="sc-main">${esc(r.sc)}</div></td><td class="num">${fmtN(r.bases)}</td><td class="num">${fmtN(r.pacotes)}</td><td class="num">${fmtH(r.etapa_6)}</td><td class="num">${fmtH(r.etapa_7)}</td><td class="num">${fmtH(r.etapa_8)}</td><td class="num"><span class="total-pill">${fmtH(r.total)}</span></td></tr>`).join('')}</tbody></table>`;
+  const mapa = new Map(anteriores.map(r => [String(r.sc || '').trim().toLowerCase(), r]));
+  return `<table class="rank"><thead><tr><th>S/C</th><th>Bases</th><th>Pacotes</th><th>E6</th><th>Δ E6</th><th>E7</th><th>Δ E7</th><th>E8</th><th>Δ E8</th><th>Total</th><th>Δ Total</th></tr></thead><tbody>${rows.map((r) => {
+    const ant = mapa.get(String(r.sc || '').trim().toLowerCase());
+    return `<tr><td><div class="sc-main">${esc(r.sc)}</div></td><td class="num">${fmtN(r.bases)}</td><td class="num">${fmtN(r.pacotes)}</td><td class="num">${fmtH(r.etapa_6)}</td><td class="num">${variationBadge(r.etapa_6, ant?.etapa_6)}</td><td class="num">${fmtH(r.etapa_7)}</td><td class="num">${variationBadge(r.etapa_7, ant?.etapa_7)}</td><td class="num">${fmtH(r.etapa_8)}</td><td class="num">${variationBadge(r.etapa_8, ant?.etapa_8)}</td><td class="num"><span class="total-pill">${fmtH(r.total)}</span></td><td class="num">${variationBadge(r.total, ant?.total)}</td></tr>`;
+  }).join('')}</tbody></table>`;
 }
 
 function basesFiltradas() {
@@ -178,7 +194,7 @@ async function carregar() {
   const top = $('#topSelect').value || '0';
 
   try {
-    const [k, kPrev, b6, b7, b8, cidadesAtendidas, cidadesPrev, sc, evo] = await Promise.all([
+    const [k, kPrev, b6, b7, b8, cidadesAtendidas, cidadesPrev, sc, evo, b6Prev, b7Prev, b8Prev, scPrev, evoPrev] = await Promise.all([
       get(`/api/kpis?${p}`),
       getOptional(`/api/kpis?${pPrev}`, null),
       get(`/api/piores-bases?${p}&etapa=6&limite=${top}`),
@@ -187,15 +203,26 @@ async function carregar() {
       get(`/api/cidades-atendidas?${p}&limite=${top}`),
       getOptional(`/api/cidades-atendidas?${pPrev}&limite=0`, []),
       get(`/api/piores-sc?${p}&limite=${top}`),
-      get(`/api/evolutivo?${p}`)
+      get(`/api/evolutivo?${p}`),
+      getOptional(`/api/piores-bases?${pPrev}&etapa=6&limite=0`, []),
+      getOptional(`/api/piores-bases?${pPrev}&etapa=7&limite=0`, []),
+      getOptional(`/api/piores-bases?${pPrev}&etapa=8&limite=0`, []),
+      getOptional(`/api/piores-sc?${pPrev}&limite=0`, []),
+      getOptional(`/api/evolutivo?${pPrev}`, [])
     ]);
 
     updateStage(6, k.etapa_6);
     updateStage(7, k.etapa_7);
     updateStage(8, k.etapa_8);
 
-    const k8Var = $('#k8Var');
-    if (k8Var) k8Var.innerHTML = variationBadge(k.etapa_8, kPrev?.etapa_8);
+    for (const etapa of [6, 7, 8]) {
+      const el = $(`#k${etapa}Var`);
+      if (el) el.innerHTML = variationBadge(k[`etapa_${etapa}`], kPrev?.[`etapa_${etapa}`]);
+    }
+    const pctEl = $('#kpVar');
+    if (pctEl) pctEl.innerHTML = variationBadgeVolume(k.pacotes, kPrev?.pacotes);
+    const totalEl = $('#ktVar');
+    if (totalEl) totalEl.innerHTML = variationBadge(k.total_6_8, kPrev?.total_6_8);
 
     $('#kp').textContent = fmtN(k.pacotes);
     $('#kt').textContent = fmtH(k.total_6_8);
@@ -205,13 +232,14 @@ async function carregar() {
     const recorte = [$('#scSelect').value, $('#cidadeSelect').value, $('#baseSelect').value].filter(Boolean);
     $('#kRecorte').textContent = recorte.length ? recorte.join(' · ') : 'Todas as bases';
 
-    $('#b6').innerHTML = tabelaBases(b6, metas[6]);
-    $('#b7').innerHTML = tabelaBases(b7, metas[7]);
-    $('#b8').innerHTML = tabelaBases(b8, metas[8]);
+    $('#b6').innerHTML = tabelaBases(b6, metas[6], b6Prev);
+    $('#b7').innerHTML = tabelaBases(b7, metas[7], b7Prev);
+    $('#b8').innerHTML = tabelaBases(b8, metas[8], b8Prev);
     $('#cidadesAtendidas').innerHTML = tabelaCidades(cidadesAtendidas, cidadesPrev);
-    $('#sc').innerHTML = tabelaSC(sc);
-
-    renderChart(evo);
+    $('#sc').innerHTML = tabelaSC(sc, scPrev);
+    const basesVar = $('#kBasesVar');
+    if (basesVar) basesVar.innerHTML = variationBadgeVolume(k.bases, kPrev?.bases);
+    renderChart(evo, evoPrev);
   } catch (err) {
     console.error('Erro ao renderizar dashboard:', err);
 
@@ -226,8 +254,7 @@ async function carregar() {
       const el = $(id);
       if (el) el.textContent = '--';
     });
-    const k8Var = $('#k8Var');
-    if (k8Var) k8Var.innerHTML = '';
+    ['#k6Var', '#k7Var', '#k8Var', '#kpVar', '#ktVar', '#kBasesVar'].forEach(id => { const el = $(id); if (el) el.innerHTML = ''; });
 
     if (evoChart) {
       evoChart.destroy();
@@ -236,12 +263,14 @@ async function carregar() {
   }
 }
 
-function renderChart(rows) {
+function renderChart(rows, anteriores = []) {
   const ctx = $('#evoChart');
   if (!ctx || typeof Chart === 'undefined') return;
 
   if (evoChart) evoChart.destroy();
 
+  const prevMap = new Map(anteriores.map(r => [shiftDate(r.data, 7), r]));
+  const anteriorDe = campo => rows.map(r => prevMap.get(r.data)?.[campo] ?? null);
   evoChart = new Chart(ctx, {
     type: 'line',
     data: {
@@ -250,7 +279,11 @@ function renderChart(rows) {
         { label: 'Etapa 6', data: rows.map((r) => r.etapa_6), tension: 0.25, borderWidth: 2 },
         { label: 'Etapa 7', data: rows.map((r) => r.etapa_7), tension: 0.25, borderWidth: 2 },
         { label: 'Etapa 8', data: rows.map((r) => r.etapa_8), tension: 0.25, borderWidth: 2 },
-        { label: 'Total 6+7+8', data: rows.map((r) => r.total), tension: 0.25, borderWidth: 3 }
+        { label: 'Total 6+7+8', data: rows.map((r) => r.total), tension: 0.25, borderWidth: 3 },
+        { label: 'E6 · semana anterior', data: anteriorDe('etapa_6'), borderDash: [5, 5], borderWidth: 1, tension: 0.25, pointRadius: 0 },
+        { label: 'E7 · semana anterior', data: anteriorDe('etapa_7'), borderDash: [5, 5], borderWidth: 1, tension: 0.25, pointRadius: 0 },
+        { label: 'E8 · semana anterior', data: anteriorDe('etapa_8'), borderDash: [5, 5], borderWidth: 1, tension: 0.25, pointRadius: 0 },
+        { label: 'Total · semana anterior', data: anteriorDe('total'), borderDash: [5, 5], borderWidth: 1, tension: 0.25, pointRadius: 0 }
       ]
     },
     options: {
