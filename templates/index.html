@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#d71920" />
   <title>J&T Express | Shipping Time</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" />
-  <link rel="stylesheet" href="/static/style.css?v=20261029-variacao-e8" />
+  <link rel="stylesheet" href="/static/style.css?v=20261104-variacao-completa" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -52,12 +52,12 @@
       <article class="card kpi-card kpi-primary">
         <div class="kpi-head"><span>Etapa 6</span><span class="kpi-tag">META 25,6H</span></div>
         <strong id="k6">--</strong>
-        <small>SC Destino → Base</small>
+        <small>SC Destino → Base</small><div class="kpi-variation"><span>Vs. semana passada</span><span id="k6Var"></span></div>
       </article>
       <article class="card kpi-card kpi-neutral">
         <div class="kpi-head"><span>Etapa 7</span><span class="kpi-tag neutral-tag">META 6,0H</span></div>
         <strong id="k7">--</strong>
-        <small>Processamento da base</small>
+        <small>Processamento da base</small><div class="kpi-variation"><span>Vs. semana passada</span><span id="k7Var"></span></div>
       </article>
       <article class="card kpi-card kpi-success">
         <div class="kpi-head"><span>Etapa 8</span><span class="kpi-tag success-tag">META 23,4H</span></div>
@@ -68,18 +68,18 @@
       <article class="card kpi-card kpi-danger">
         <div class="kpi-head"><span>Total de pacotes</span><span class="kpi-icon">∑</span></div>
         <strong id="kp">--</strong>
-        <small>Shipping médio 6+7+8: <b id="kt">--</b></small>
+        <small>Shipping médio 6+7+8: <b id="kt">--</b> <span id="ktVar"></span></small><div class="kpi-variation"><span>Pacotes vs. semana passada</span><span id="kpVar"></span></div>
       </article>
     </section>
 
     <section class="summary-strip">
-      <div><span>Bases analisadas</span><strong id="kBases">--</strong></div>
+      <div><span>Bases analisadas</span><strong id="kBases">--</strong><span id="kBasesVar"></span></div>
       <div><span>Maior gargalo</span><strong id="kGargalo">--</strong></div>
       <div><span>Recorte atual</span><strong id="kRecorte">Todas as bases</strong></div>
     </section>
 
     <section class="panel ranking-section">
-      <div class="panel-title"><div><span class="section-kicker">RANKING OPERACIONAL</span><h2>Piores bases por etapa</h2><span>Quanto maior o tempo, pior a performance operacional.</span></div></div>
+      <div class="panel-title"><div><span class="section-kicker">RANKING OPERACIONAL</span><h2>Piores bases por etapa</h2><span>Quanto maior o tempo, pior a performance operacional. A variação compara com o mesmo período 7 dias antes.</span></div></div>
       <div class="stage-stack">
         <article class="stage-panel">
           <div class="stage-head"><div><span class="stage-chip">E6</span><h3>SC Destino → Base</h3></div><small>Meta 25,6 h</small></div>
@@ -102,11 +102,11 @@
 
     <section class="dashboard-grid">
       <article class="panel dashboard-square">
-        <div class="panel-title"><div><span class="section-kicker">GESTÃO</span><h2>S/C Piores</h2><span>Shipping médio consolidado das etapas 6, 7 e 8</span></div></div>
+        <div class="panel-title"><div><span class="section-kicker">GESTÃO</span><h2>S/C Piores</h2><span>Shipping médio consolidado das etapas 6, 7 e 8 • Variação semanal por etapa</span></div></div>
         <div id="sc" class="table-wrap square-table"></div>
       </article>
       <article class="panel dashboard-square chart-panel">
-        <div class="panel-title"><div><span class="section-kicker">TENDÊNCIA</span><h2>Quadro evolutivo</h2><span id="evoHint">Histórico do recorte selecionado</span></div></div>
+        <div class="panel-title"><div><span class="section-kicker">TENDÊNCIA</span><h2>Quadro evolutivo</h2><span id="evoHint">Histórico do recorte selecionado • linhas tracejadas = mesmos dias da semana anterior</span></div></div>
         <div class="chart-box"><canvas id="evoChart"></canvas></div>
       </article>
     </section>
@@ -114,6 +114,6 @@
     <footer class="dashboard-footer"><span>J&T Express • Shipping Time</span><span>Performance Last Mile</span></footer>
   </main>
 
-  <script src="/static/app.js?v=20261029-variacao-e8"></script>
+  <script src="/static/app.js?v=20261104-variacao-completa"></script>
 </body>
 </html>
