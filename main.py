@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from db import get_supabase
+from gestao_postgres import aplicar_gestao
 
 BASE_DIR = Path(__file__).resolve().parent
 app = FastAPI(title="J&T Shipping Time")
@@ -31,7 +32,7 @@ def buscar(data_inicial: str | None = None, data_final: str | None = None) -> li
         q = q.gte("data", data_inicial)
     if data_final:
         q = q.lte("data", data_final)
-    return q.execute().data or []
+    return aplicar_gestao(q.execute().data or [], coluna_base="base")
 
 
 def buscar_cidades(data_inicial: str | None = None, data_final: str | None = None) -> list[dict]:
@@ -42,7 +43,7 @@ def buscar_cidades(data_inicial: str | None = None, data_final: str | None = Non
             q = q.gte("data", data_inicial)
         if data_final:
             q = q.lte("data", data_final)
-        return q.execute().data or []
+        return aplicar_gestao(q.execute().data or [], coluna_base="base")
     except Exception:
         # Mantém o dashboard principal funcional mesmo antes da criação da tabela nova.
         return []
